@@ -1,15 +1,14 @@
 import os
-# pyrefly: ignore [missing-import]
 from flask import Flask, jsonify
-import psycopg2
+import pymysql
 import boto3
 
 app = Flask(__name__)
 
 # Ambil konfigurasi dari Environment Variables
 DB_HOST = os.getenv('DB_HOST', 'localhost')
-DB_NAME = os.getenv('DB_NAME', 'postgres')
-DB_USER = os.getenv('DB_USER', 'postgres')
+DB_NAME = os.getenv('DB_NAME', 'mysql') # Default DB name
+DB_USER = os.getenv('DB_USER', 'admin')
 DB_PASSWORD = os.getenv('DB_PASSWORD', 'Password123!')
 S3_BUCKET = os.getenv('S3_BUCKET', 'lks-app-bucket-unik123')
 
@@ -17,22 +16,24 @@ S3_BUCKET = os.getenv('S3_BUCKET', 'lks-app-bucket-unik123')
 def index():
     return jsonify({
         "status": "success",
-        "message": "Aplikasi Python Flask berjalan di Ubuntu Container!",
+        "message": "Aplikasi Python Flask + MySQL berjalan di Ubuntu Container!",
         "server": "AWS EC2 Auto Scaling"
     })
 
 @app.route('/db-check')
 def db_check():
     try:
-        conn = psycopg2.connect(
+        # Koneksi ke MySQL RDS (Port default 3306)
+        conn = pymysql.connect(
             host=DB_HOST,
-            database=DB_NAME,
             user=DB_USER,
             password=DB_PASSWORD,
+            database=DB_NAME,
+            port=3306,
             connect_timeout=3
         )
         conn.close()
-        return jsonify({"database": "Connected successfully!"})
+        return jsonify({"database": "Connected successfully to MySQL RDS!"})
     except Exception as e:
         return jsonify({"database_error": str(e)}), 500
 
@@ -40,7 +41,6 @@ def db_check():
 def s3_check():
     try:
         s3 = boto3.client('s3')
-        # Tes list objects di bucket
         response = s3.list_objects_v2(Bucket=S3_BUCKET)
         return jsonify({
             "s3_bucket": S3_BUCKET,
